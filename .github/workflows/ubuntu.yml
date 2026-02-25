@@ -1,0 +1,27 @@
+name: Run Ubuntu Container
+
+# Workflow, main branch'e her push yapıldığında çalışacak
+on:
+  push:
+    branches:
+      - main  # Ana branch'e push yapıldığında çalışacak
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # Ubuntu ortamında çalıştırılacak
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2  # Depoyu al
+
+    - name: Setup Docker
+      run: |
+        sudo apt update
+        sudo apt install -y docker.io  # Docker'ı yükle
+        sudo systemctl start docker     # Docker'ı başlat
+        sudo systemctl enable docker    # Docker'ı sürekli başlatacak şekilde ayarla
+
+    - name: Run Ubuntu Container
+      run: |
+        sudo docker pull ubuntu:latest  # En son Ubuntu imajını indir
+        sudo docker run -d --name ubuntu_container ubuntu:latest sleep 21600  # 6 saatlik (21600 saniye) bir konteynır çalıştır
