@@ -1,27 +1,52 @@
-name: Run Ubuntu Container
+name: TMATE-10-INSTANT
 
-# Workflow, main branch'e her push yapıldığında çalışacak
-on:
-  push:
-    branches:
-      - main  # Ana branch'e push yapıldığında çalışacak
+on: [push]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest  # Ubuntu ortamında çalıştırılacak
-
+  tmate10:
+    runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2  # Depoyu al
+      - name: Install tmate
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y tmate
 
-    - name: Setup Docker
-      run: |
-        sudo apt update
-        sudo apt install -y docker.io  # Docker'ı yükle
-        sudo systemctl start docker     # Docker'ı başlat
-        sudo systemctl enable docker    # Docker'ı sürekli başlatacak şekilde ayarla
+      - name: Start 10 tmate sessions and generate ALL_SSH.txt
+        shell: bash
+        run: |
+          set -e
+          rm -f ALL_SSH.txt
+          touch ALL_SSH.txt
 
-    - name: Run Ubuntu Container
-      run: |
-        sudo docker pull ubuntu:latest  # En son Ubuntu imajını indir
-        sudo docker run -d --name ubuntu_container ubuntu:latest sleep 21600  # 6 saatlik (21600 saniye) bir konteynır çalıştır
+          for i in $(seq 1 10); do
+            SOCK="/tmp/tmate-$i.sock"
+
+            tmate -S "$SOCK" new-session -d
+            tmate -S "$SOCK" wait tmate-ready
+
+            SSH_LINE="$(tmate -S "$SOCK" display -p '#{tmate_ssh}')"
+            WEB_LINE="$(tmate -S "$SOCK" display -p '#{tmate_web}')"
+
+            {
+              echo "NODE=$i"
+              echo "SSH=$SSH_LINE"
+              echo "WEB=$WEB_LINE"
+              echo "-----"
+            } >> ALL_SSH.txt
+
+            echo "[$i] $SSH_LINE"
+          done
+
+          echo ""
+          echo "==== ALL_SSH.txt ===="
+          cat ALL_SSH.txt
+
+      - name: Upload ALL_SSH.txt (IMMEDIATE)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ALL_SSH
+          path: ALL_SSH.txt
+          retention-days: 1
+
+      - name: Keep sessions alive
+        run: sleep 6h
